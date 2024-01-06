@@ -1,0 +1,4 @@
+deployment: "cluster-autoscaler"
+namespace: "kube-system"
+nodeGroups:
+  - name: eks-example-node-group
