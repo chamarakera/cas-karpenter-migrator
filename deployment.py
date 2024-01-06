@@ -18,6 +18,7 @@ class Deployment:
             if e.status == 404:
                 logger.error("deployment could not be found. please check" 
                             " if deployment name or namespace names are correct.")
+                sys.exit(1)
         
         return deployment
 
@@ -34,6 +35,7 @@ class Deployment:
             if e.status == 404:
                 logger.error("deployment could not be found. please check" 
                             " if deployment name or namespace names are correct.")
-        else:
-            logger.info(f"patched number of deployment replicas to: "
-                        "{patched_deployment.spec.replicas}")
+                sys.exit(1)
+
+        logger.info(f"patched number of deployment replicas to: "
+                    "{patched_deployment.spec.replicas}")
