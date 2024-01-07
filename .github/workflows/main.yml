@@ -15,7 +15,6 @@ jobs:
 
       - name: Unit Tests
         run: |
-          cd request_handler
           python -m unittest discover .
 
       - name: Lint
