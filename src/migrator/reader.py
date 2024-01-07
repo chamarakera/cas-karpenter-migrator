@@ -15,4 +15,4 @@ class Reader:
         return self.read_config()["deployment"]
     
     def node_group(self) -> list:
-        return self.read_config()["nodeGroup"]
+        return self.read_config()["nodeGroups"]
