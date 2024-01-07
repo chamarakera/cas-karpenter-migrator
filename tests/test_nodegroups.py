@@ -1,4 +1,5 @@
 import unittest
+
 from src.migrator.nodegroup import NodeGroup
 
 TEST_DATA = [

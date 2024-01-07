@@ -1,8 +1,10 @@
-from kubeconfig import KubeConfig
-from deployment import Deployment
-from reader import Reader
-from nodegroup import NodeGroup
 from pprint import pprint
+
+from deployment import Deployment
+from kubeconfig import KubeConfig
+from nodegroup import NodeGroup
+from reader import Reader
+
 
 def main():
     KubeConfig.load_kube_config()
@@ -21,7 +23,7 @@ def main():
     node_group = NodeGroup(config.node_group()[0]['name'])
     single_multi_az_ng = node_group.single_multi_az_node_group()
     pprint(node_group.select_instances(single_multi_az_ng))
-    
+
 
 if __name__ == "__main__":
     main()
