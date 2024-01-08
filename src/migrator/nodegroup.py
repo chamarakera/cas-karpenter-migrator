@@ -7,24 +7,18 @@ from loguru import logger
 class NodeGroup:
     def __init__(self, node_group_name: str) -> None:
         self.node_group_name = node_group_name
-        self.client = boto3.client('autoscaling')
+        self.client = boto3.client("autoscaling")
 
     def single_multi_az_node_group(self) -> list:
         node_group = self.client.describe_auto_scaling_groups(
-            Filters=[
-                {
-                    'Name': 'tag:Name',
-                    'Values': [
-                        self.node_group_name
-                    ]
-                }
-            ]
+            Filters=[{"Name": "tag:Name", "Values": [self.node_group_name]}]
         )
 
-        if not node_group['AutoScalingGroups'][0]['Instances']:
-            logger.error("no node groups were identified. "
-                         "please check if tags are correct")
-        return node_group['AutoScalingGroups'][0]['Instances']
+        if not node_group["AutoScalingGroups"][0]["Instances"]:
+            logger.error(
+                "no node groups were identified. " "please check if tags are correct"
+            )
+        return node_group["AutoScalingGroups"][0]["Instances"]
 
     @staticmethod
     def select_instances(node_group_instances: list) -> list:
@@ -37,7 +31,11 @@ class NodeGroup:
             count = 1
             for instance in node_group_instances:
                 if count <= 2:
-                    if selected_instances and selected_instances[0]["AvailabilityZone"] == instance["AvailabilityZone"]:
+                    if (
+                        selected_instances
+                        and selected_instances[0]["AvailabilityZone"]
+                        == instance["AvailabilityZone"]
+                    ):
                         continue
                     selected_instances.append(instance)
                     count += 1
