@@ -14,11 +14,23 @@ class NodeGroup:
             Filters=[{"Name": "tag:Name", "Values": [self.node_group_name]}]
         )
 
-        if not node_group["AutoScalingGroups"][0]["Instances"]:
+        if not node_group["AutoScalingGroups"]:
             logger.error(
-                "no node groups were identified. " "please check if tags are correct"
+                "no node groups were identified. please check if tags are correct"
             )
-        return node_group["AutoScalingGroups"][0]["Instances"]
+        return node_group["AutoScalingGroups"]
+
+    def extract_instances(self, auto_scaling_group: object) -> list:
+        if not auto_scaling_group["Instances"]:
+            logger.error("no instances identified in the auto scaling group")
+            sys.exist(1)
+        return auto_scaling_group["Instances"]
+
+    def extract_asg_name(self, auto_scaling_group: object) -> list:
+        logger.info(
+            f"asg name of the node group: {auto_scaling_group['AutoScalingGroupName']}"
+        )
+        return auto_scaling_group["AutoScalingGroupName"]
 
     @staticmethod
     def select_instances(node_group_instances: list) -> list:
