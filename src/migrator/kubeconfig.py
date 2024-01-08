@@ -12,6 +12,8 @@ class KubeConfig:
         try:
             config.load_kube_config()
         except config.config_exception.ConfigException:
-            logger.error("failed to load kubeconfig. please make sure "
-                        "kubeconfig is setup prior to running this script")
+            logger.error(
+                "failed to load kubeconfig. please make sure "
+                "kubeconfig is setup prior to running this script"
+            )
             sys.exit(1)
