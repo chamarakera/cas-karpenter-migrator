@@ -32,6 +32,11 @@ def main():
     scaling_actions = ScalingActions(auto_scaling_group_name)
     scaling_actions.set_scale_in_protection(selected_instances)
 
+    # get instances without scale-in protection enabled
+    _ = node_group.instances_without_protection(
+        instances,
+        selected_instances)
+
 
 if __name__ == "__main__":
     main()

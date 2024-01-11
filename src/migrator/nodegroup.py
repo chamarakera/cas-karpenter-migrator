@@ -57,3 +57,12 @@ class NodeGroup:
             sys.exit(1)
 
         return selected_instances
+
+    def instances_without_protection(self, instance_in_asg, selected_instances):
+        all_instances = [instance["InstanceId"] for instance in instance_in_asg]
+        selected_instances = [instance["InstanceId"] for instance in selected_instances]
+
+        instances_without_protection = ([instance for instance in all_instances if
+                                         instance not in selected_instances])
+
+        return instances_without_protection
