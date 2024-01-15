@@ -2,6 +2,7 @@ from deployment import Deployment
 from kubeconfig import KubeConfig
 from nodegroup import NodeGroup
 from reader import Reader
+from data import Data
 from scaling_actions import ScalingActions
 
 
@@ -33,9 +34,12 @@ def main():
     scaling_actions.set_scale_in_protection(selected_instances)
 
     # get instances without scale-in protection enabled
-    _ = node_group.instances_without_protection(
-        instances,
-        selected_instances)
+    print(
+        Data().create_instance_status_info(
+            node_group.instances_without_protection(instances, selected_instances),
+            "pending",
+        )
+    )
 
 
 if __name__ == "__main__":
