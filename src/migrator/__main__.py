@@ -1,8 +1,8 @@
+from data import Data
 from deployment import Deployment
 from kubeconfig import KubeConfig
 from nodegroup import NodeGroup
 from reader import Reader
-from data import Data
 from scaling_actions import ScalingActions
 
 
