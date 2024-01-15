@@ -33,13 +33,15 @@ def main():
     scaling_actions = ScalingActions(auto_scaling_group_name)
     scaling_actions.set_scale_in_protection(selected_instances)
 
-    # get instances without scale-in protection enabled
-    print(
-        Data().create_instance_status_info(
-            node_group.instances_without_protection(instances, selected_instances),
-            "pending",
+    # generate dictionary of instance without protection
+    instances_without_protection = [
+        {"instance_id": instance, "status": "pending"}
+        for instance in node_group.instances_without_protection(
+            instances, selected_instances
         )
-    )
+    ]
+
+    print(instances_without_protection)
 
 
 if __name__ == "__main__":
