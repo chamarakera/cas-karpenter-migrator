@@ -7,10 +7,11 @@ from loguru import logger
 class NodeGroup:
     def __init__(self, node_group_name: str) -> None:
         self.node_group_name = node_group_name
-        self.client = boto3.client("autoscaling")
+        self.asg_client = boto3.client("autoscaling")
+        self.ec2_client = boto3.client("ec2")
 
     def single_multi_az_node_group(self) -> list:
-        node_group = self.client.describe_auto_scaling_groups(
+        node_group = self.asg_client.describe_auto_scaling_groups(
             Filters=[{"Name": "tag:Name", "Values": [self.node_group_name]}]
         )
 
@@ -67,3 +68,20 @@ class NodeGroup:
         ]
 
         return instances_without_protection
+
+    def get_node_name(self, instance_ids: list, use_name_tag=False) -> list:
+        if use_name_tag:
+            response = self.ec2_client.describe_tags(
+                Filters=[{"Name": "resource-id", "Values": instance_ids}]
+            )
+            for tag in response["Tags"]:
+                if tag["Key"] == "Name":
+                    print(tag["Value"])
+        else:
+            response = self.ec2_client.describe_instances(
+                InstanceIds=instance_ids,
+            )
+            for interface in response["Reservations"][0]["Instances"][0][
+                "NetworkInterfaces"
+            ]:
+                print(interface["PrivateDnsName"])
