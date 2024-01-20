@@ -34,14 +34,16 @@ def main():
     scaling_actions.set_scale_in_protection(selected_instances)
 
     # generate dictionary of instance without protection
+    node_group.get_node_name(
+        node_group.instances_without_protection(instances, selected_instances)
+    )
+
     instances_without_protection = [
         {"instance_id": instance, "status": "pending"}
         for instance in node_group.instances_without_protection(
             instances, selected_instances
         )
     ]
-
-    print(instances_without_protection)
 
 
 if __name__ == "__main__":
