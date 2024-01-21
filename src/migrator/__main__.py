@@ -38,12 +38,12 @@ def main():
         node_group.instances_without_protection(instances, selected_instances)
     )
 
-    instances_without_protection = [
-        {"instance_id": instance, "status": "pending"}
-        for instance in node_group.instances_without_protection(
-            instances, selected_instances
-        )
-    ]
+    # instances_without_protection = [
+    #     {"instance_id": instance, "status": "pending"}
+    #     for instance in node_group.instances_without_protection(
+    #         instances, selected_instances
+    #     )
+    # ]
 
 
 if __name__ == "__main__":
