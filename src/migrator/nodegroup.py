@@ -65,8 +65,8 @@ class NodeGroup:
 
         logger.info(
             f"Instances selected to add scale-in protection: "
-            f"{[instance_info['InstanceId'] for instance_info in selected_instances]}"
-            f"{[instance_info['AvailabilityZone'] for instance_info in selected_instances]}"
+            f"{', '.join([instance['InstanceId'] for instance in selected_instances])}"
+            f"{', '.join([instance['AvailabilityZone'] for instance in selected_instances])}"
         )
 
         return selected_instances
@@ -77,6 +77,9 @@ class NodeGroup:
         instances_without_protection = [
             instance for instance in all_instances if instance not in selected_instances
         ]
+        logger.info(
+            "Instances without scale-in protection: " f"{', '.join(instances_without_protection)}"
+        )
 
         return instances_without_protection
 

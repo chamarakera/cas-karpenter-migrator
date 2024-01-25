@@ -100,7 +100,7 @@ class KubeActions:
                 return
             logger.debug(
                 "Still waiting for deletion of the following pods: "
-                f"{', '.join(map(lambda pod: pod.metadata.namespaace + "/" + pod.metadata.name, pods))}"
+                f"{', '.join(map(lambda pod: pod.metadata.namespaace + '/' + pod.metadata.name, pods))}"
             )
             time.sleep(INTERVAL)
 
@@ -116,6 +116,6 @@ class KubeActions:
                 return
             logger.debug(
                 f"Still waiting for the pods to be scheduled: "
-                f"{', '.join(map(lambda pod: pod.metadata.namespaace + "/" + pod.metadata.name, pods))}"
+                f"{', '.join(map(lambda pod: pod.metadata.namespaace + '/' + pod.metadata.name, pods))}"
             )
             time.sleep(INTERVAL)

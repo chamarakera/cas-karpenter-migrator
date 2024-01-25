@@ -17,7 +17,7 @@ class ScalingActions:
             ProtectedFromScaleIn=True,
         )
         if response["ResponseMetadata"]["HTTPStatusCode"] == 200:
-            logger.info(f"scale-in protection added to: {instance_ids}")
+            logger.info(f"scale-in protection added to: {', '.join(instance_ids)}")
         else:
-            logger.error(f"scale-in protection could not be added to: {instance_ids}")
+            logger.error(f"scale-in protection could not be added to: {', '.join(instance_ids)}")
             sys.exit(0)
