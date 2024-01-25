@@ -4,6 +4,8 @@ from kubernetes import client
 from kubernetes.client.rest import ApiException
 from loguru import logger
 
+INTERVAL = 5
+
 
 class KubeActions:
     def __init__(self) -> None:
@@ -32,14 +34,19 @@ class KubeActions:
         return True
 
     def get_evictable_pods(self, node_name):
+        """Removes all pods from the specified node"""
         field_selector = "spec.nodeName=" + node_name
         pods = self.v1_api.list_pod_for_all_namespaces(watch=False, field_selector=field_selector)
+
         return [pod for pod in pods.items if self.pod_is_evicatable(pod)]
 
-    def remove_all_pods(self, node_name, poll=5):
+    def remove_all_pods(self, node_name):
         pods = self.get_evictable_pods(node_name)
 
         logger.debug(f"Number of pods to delete: {str(len(pods))}")
+
+        self.evict_until_completed(pods)
+        self.wait_until_empty(node_name)
 
     def evict_pods(self, pods):
         remaining = []
@@ -72,17 +79,18 @@ class KubeActions:
                 logger.exception(
                     f"Unexpected error adding evication for pod {pod.metadata.namespace}/{pod.metadata.name}"
                 )
+
         return remaining
 
-    def evict_until_completed(self, pods, poll):
+    def evict_until_completed(self, pods):
         pending = pods
         while True:
             pending = self.evict_pods(pending)
             if (len(pending)) <= 0:
                 return
-            time.sleep(poll)
+            time.sleep(INTERVAL)
 
-    def wait_until_empty(self, node_name, poll):
+    def wait_until_empty(self, node_name):
         logger.info("Waiting for evictions to complete")
         while True:
             pods = self.get_evictable_pods(node_name)
@@ -90,8 +98,10 @@ class KubeActions:
                 logger.info("All pods evicted successfully")
                 return
             logger.debug(
-                f"Still waiting for deletion of the following pods: {', '.join(map(lambda pod: pod.metadata.namespaace + "/" + pod.metadata.name, pods))}"
+                "Still waiting for deletion of the following pods: "
+                f"{', '.join(map(lambda pod: pod.metadata.namespaace + "/" + pod.metadata.name, pods))}"
             )
+            time.sleep(INTERVAL)
 
     def get_pending_pods(self):
         pods = self.v1_api.list_pod_for_all_namespaces(watch=False)
@@ -104,6 +114,7 @@ class KubeActions:
                 logger.info("All pods scheduled successfully")
                 return
             logger.debug(
-                f"Still waiting for the following pods to be scheduled: {', '.join(map(lambda pod: pod.metadata.namespaace + "/" + pod.metadata.name, pods))}"
+                f"Still waiting for the pods to be scheduled: "
+                f"{', '.join(map(lambda pod: pod.metadata.namespaace + "/" + pod.metadata.name, pods))}"
             )
             time.sleep(5)
