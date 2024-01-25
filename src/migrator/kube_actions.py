@@ -1,7 +1,8 @@
+import time
+
 from kubernetes import client
 from kubernetes.client.rest import ApiException
 from loguru import logger
-import time
 
 
 class KubeActions:
@@ -20,29 +21,19 @@ class KubeActions:
         if pod.metadata.annotations is not None and pod.metadata.annotations.get(
             "kubernetes.io/config.mirror"
         ):
-            logger.info(
-                f"Skipping mirror pod {pod.metadata.namespace}/{pod.metadata.name}"
-            )
+            logger.info(f"Skipping mirror pod {pod.metadata.namespace}/{pod.metadata.name}")
             return False
         if pod.metadata.owner_references is None:
             return True
         for ref in pod.metadata.owner_references:
-            if (
-                ref.controller is not None
-                and ref.controller
-                and ref.kind == "DaemonSet"
-            ):
-                logger.info(
-                    f"Skipping DaemonSet {pod.metadata.namespace}/{pod.metadata.name}"
-                )
+            if ref.controller is not None and ref.controller and ref.kind == "DaemonSet":
+                logger.info(f"Skipping DaemonSet {pod.metadata.namespace}/{pod.metadata.name}")
                 return False
         return True
 
     def get_evictable_pods(self, node_name):
         field_selector = "spec.nodeName=" + node_name
-        pods = self.v1_api.list_pod_for_all_namespaces(
-            watch=False, field_selector=field_selector
-        )
+        pods = self.v1_api.list_pod_for_all_namespaces(watch=False, field_selector=field_selector)
         return [pod for pod in pods.items if self.pod_is_evicatable(pod)]
 
     def remove_all_pods(self, node_name, poll=5):
@@ -53,9 +44,7 @@ class KubeActions:
     def evict_pods(self, pods):
         remaining = []
         for pod in pods:
-            logger.info(
-                f"Evicting pod {pod.metadata.name} in namespace {pod.metadata.namespace}"
-            )
+            logger.info(f"Evicting pod {pod.metadata.name} in namespace {pod.metadata.namespace}")
             body = {
                 "apiVersion": "policy/v1beta1",
                 "kind": "Eviction",

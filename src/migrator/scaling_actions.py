@@ -5,11 +5,11 @@ from loguru import logger
 
 
 class ScalingActions:
-    def __init__(self, auto_scaling_group) -> None:
+    def __init__(self, auto_scaling_group: str) -> None:
         self.client = boto3.client("autoscaling")
         self.auto_scaling_group = auto_scaling_group
 
-    def set_scale_in_protection(self, instances) -> None:
+    def set_scale_in_protection(self, instances: list) -> None:
         instance_ids = [instance["InstanceId"] for instance in instances]
         response = self.client.set_instance_protection(
             InstanceIds=instance_ids,

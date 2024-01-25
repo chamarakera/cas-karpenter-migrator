@@ -12,25 +12,31 @@ class NodeGroup:
 
     def single_multi_az_node_group(self) -> list:
         node_group = self.asg_client.describe_auto_scaling_groups(
-            Filters=[{"Name": "tag:Name", "Values": [self.node_group_name]}]
+            Filters=[
+                {
+                    "Name": "tag:Name",
+                    "Values": [
+                        self.node_group_name,
+                    ],
+                },
+            ]
         )
 
         if not node_group["AutoScalingGroups"]:
-            logger.error(
-                "no node groups were identified. please check if tags are correct"
-            )
+            logger.error("No node groups were identified. Please check if tags are correct")
+
         return node_group["AutoScalingGroups"]
 
     def extract_instances(self, auto_scaling_group: object) -> list:
         if not auto_scaling_group["Instances"]:
-            logger.error("no instances identified in the auto scaling group")
+            logger.error("No instances identified in the auto scaling group")
             sys.exist(1)
+
         return auto_scaling_group["Instances"]
 
     def extract_asg_name(self, auto_scaling_group: object) -> list:
-        logger.info(
-            f"asg name of the node group: {auto_scaling_group['AutoScalingGroupName']}"
-        )
+        logger.info(f"ASG name of the node group: {auto_scaling_group['AutoScalingGroupName']}")
+
         return auto_scaling_group["AutoScalingGroupName"]
 
     @staticmethod
@@ -57,12 +63,17 @@ class NodeGroup:
             logger.error("the nodes must belong to at least two different AZs")
             sys.exit(1)
 
+        logger.info(
+            f"Instances selected to add scale-in protection: "
+            f"{[instance_info['InstanceId'] for instance_info in selected_instances]}"
+            f"{[instance_info['AvailabilityZone'] for instance_info in selected_instances]}"
+        )
+
         return selected_instances
 
-    def instances_without_protection(self, instance_in_asg, selected_instances):
+    def instances_without_protection(self, instance_in_asg: list, selected_instances: list) -> list:
         all_instances = [instance["InstanceId"] for instance in instance_in_asg]
         selected_instances = [instance["InstanceId"] for instance in selected_instances]
-
         instances_without_protection = [
             instance for instance in all_instances if instance not in selected_instances
         ]
@@ -70,18 +81,37 @@ class NodeGroup:
         return instances_without_protection
 
     def get_node_name(self, instance_ids: list, use_name_tag=False) -> list:
+        nodes = []
         if use_name_tag:
             response = self.ec2_client.describe_tags(
-                Filters=[{"Name": "resource-id", "Values": instance_ids}]
+                Filters=[
+                    {
+                        "Name": "resource_id",
+                        "Values": instance_ids,
+                    },
+                ]
             )
             for tag in response["Tags"]:
                 if tag["Key"] == "Name":
-                    print(tag["Value"])
+                    nodes.append(
+                        {
+                            "instance_id": tag["ResourceId"],
+                            "node_name": tag["Value"],
+                            "status": "pending",
+                        }
+                    )
         else:
             response = self.ec2_client.describe_instances(
                 InstanceIds=instance_ids,
             )
-            for interface in response["Reservations"][0]["Instances"][0][
-                "NetworkInterfaces"
-            ]:
-                print(interface["PrivateDnsName"])
+            for reservation in response["Reservations"]:
+                for instances in reservation["Instances"]:
+                    nodes.append(
+                        {
+                            "instance_id": instances["InstanceId"],
+                            "node_name": instances["PrivateDnsName"],
+                            "status": "pending",
+                        }
+                    )
+
+        return nodes
