@@ -40,7 +40,7 @@ def main():
     # Perform different actions to corden and evict pods from nodes
     kube_actions = KubeActions()
     kube_actions.corden(nodes_to_retire[0]["node_name"])
-    kube_actions.remove_all_pods(nodes_to_retire[0]["node_name"])
+    kube_actions.drain(nodes_to_retire[0]["node_name"])
     kube_actions.wait_until_pods_scheduled()
 
 

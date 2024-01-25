@@ -40,7 +40,7 @@ class KubeActions:
 
         return [pod for pod in pods.items if self.pod_is_evicatable(pod)]
 
-    def remove_all_pods(self, node_name):
+    def drain(self, node_name):
         pods = self.get_evictable_pods(node_name)
 
         logger.debug(f"Number of pods to delete: {str(len(pods))}")
@@ -69,7 +69,8 @@ class KubeActions:
                 if e.status == 429:
                     remaining.append(pod)
                     logger.waring(
-                        f"Pod {pod.metadata.namespace}/{pod.metadata.name} could not be evicted due to distruption budget. Will retry."
+                        f"Pod {pod.metadata.namespace}/{pod.metadata.name} "
+                        "could not be evicted due to distruption budget. Will retry."
                     )
                 else:
                     logger.exception(
@@ -117,4 +118,4 @@ class KubeActions:
                 f"Still waiting for the pods to be scheduled: "
                 f"{', '.join(map(lambda pod: pod.metadata.namespaace + "/" + pod.metadata.name, pods))}"
             )
-            time.sleep(5)
+            time.sleep(INTERVAL)
