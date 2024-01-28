@@ -8,8 +8,9 @@ INTERVAL = 5
 
 
 class KubeActions:
-    def __init__(self) -> None:
+    def __init__(self, action_timeout=5) -> None:
         self.v1_api = client.CoreV1Api()
+        self.action_timeout = action_timeout
 
     def corden(self, node_name: str):
         body = {
@@ -92,12 +93,18 @@ class KubeActions:
             time.sleep(INTERVAL)
 
     def wait_until_empty(self, node_name):
+        timeout = self.time_out(self.action_timeout)
         logger.info("Waiting for evictions to complete")
         while True:
             pods = self.get_evictable_pods(node_name)
             if len(pods) <= 0:
                 logger.info("All pods evicted successfully")
                 return
+            if time.time() > timeout:
+                logger.error(
+                    "All pods were not scheduled during the specified time. "
+                    "Hence aborting... Please check why all pods could not be scheduled."
+                )
             logger.debug(
                 "Still waiting for deletion of the following pods: "
                 f"{', '.join(map(lambda pod: pod.metadata.namespaace + '/' + pod.metadata.name, pods))}"
@@ -109,13 +116,23 @@ class KubeActions:
         return [pod for pod in pods.items if pod.status.phase == "Pending"]
 
     def wait_until_pods_scheduled(self):
+        timeout = self.time_out(self.action_timeout)
         while True:
             pods = self.get_pending_pods()
             if len(pods) <= 0:
                 logger.info("All pods scheduled successfully")
                 return
+            if time.time() > timeout:
+                logger.error(
+                    "All pods were not scheduled during the specified time. "
+                    "Hence aborting... Please check why all pods could not be scheduled."
+                )
             logger.debug(
                 f"Still waiting for the pods to be scheduled: "
                 f"{', '.join(map(lambda pod: pod.metadata.namespaace + '/' + pod.metadata.name, pods))}"
             )
             time.sleep(INTERVAL)
+
+    def time_out(self, minutes):
+        timeout = time.time() + 60 * minutes
+        return timeout
