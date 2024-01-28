@@ -10,6 +10,8 @@ class ScalingActions:
         self.auto_scaling_group = auto_scaling_group
 
     def set_scale_in_protection(self, instances: list) -> None:
+        """Set scale-in protection to a a list
+        of instances in and Auto Scaling Group"""
         instance_ids = [instance["InstanceId"] for instance in instances]
         response = self.client.set_instance_protection(
             InstanceIds=instance_ids,

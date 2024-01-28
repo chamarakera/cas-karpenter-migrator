@@ -12,6 +12,8 @@ class Deployment:
         self.apps_v1_api = client.AppsV1Api()
 
     def find_deployment(self) -> object:
+        """Finds a deployment object when the name and the namespace
+        of the deployment is given"""
         try:
             deployment = self.apps_v1_api.read_namespaced_deployment(
                 name=self.deployment_name, namespace=self.namespace
@@ -27,6 +29,7 @@ class Deployment:
         return deployment
 
     def scale_to_zero(self, deployment: Type[client.V1Deployment]):
+        """Scales the deployment replicas to 0"""
         deployment.spec.replicas = 0
 
         try:
