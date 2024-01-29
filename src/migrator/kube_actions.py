@@ -93,7 +93,7 @@ class KubeActions:
             time.sleep(INTERVAL)
 
     def wait_until_empty(self, node_name):
-        timeout = self.time_out(self.action_timeout)
+        timeout = self.timeout(self.action_timeout)
         logger.info("Waiting for evictions to complete")
         while True:
             pods = self.get_evictable_pods(node_name)
@@ -102,8 +102,7 @@ class KubeActions:
                 return
             if time.time() > timeout:
                 logger.error(
-                    "All pods were not scheduled during the specified time. "
-                    "Hence aborting... Please check why all pods could not be scheduled."
+                    "All pods were not be evicted during the specified time. Hence aborting..."
                 )
             logger.debug(
                 "Still waiting for deletion of the following pods: "
@@ -116,7 +115,7 @@ class KubeActions:
         return [pod for pod in pods.items if pod.status.phase == "Pending"]
 
     def wait_until_pods_scheduled(self):
-        timeout = self.time_out(self.action_timeout)
+        timeout = self.timeout(self.action_timeout)
         while True:
             pods = self.get_pending_pods()
             if len(pods) <= 0:
@@ -124,8 +123,7 @@ class KubeActions:
                 return
             if time.time() > timeout:
                 logger.error(
-                    "All pods were not scheduled during the specified time. "
-                    "Hence aborting... Please check why all pods could not be scheduled."
+                    "All pods were not scheduled during the specified time. Hence aborting..."
                 )
             logger.debug(
                 f"Still waiting for the pods to be scheduled: "
@@ -133,6 +131,6 @@ class KubeActions:
             )
             time.sleep(INTERVAL)
 
-    def time_out(self, minutes):
+    def timeout(self, minutes):
         timeout = time.time() + 60 * minutes
         return timeout
