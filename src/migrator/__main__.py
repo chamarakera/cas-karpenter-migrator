@@ -14,7 +14,7 @@ def main():
 
     # Checks if there are Pods with "NoSchedule" tolerations
     # before starting the migration tasks
-    KubeActions().check_no_schedule_tolerations()
+    KubeActions().detect_no_schedule_tolerations()
 
     # Find the deployment object of cluster auto scaler
     # Scale cluster auto scaler deployment down to zero
@@ -53,6 +53,7 @@ def main():
     # https://karpenter.sh/docs/getting-started/migrating-from-cas/#remove-cas
     single_multi_az_ng_size = 2
     scaling_actions.resize_scaling_group(single_multi_az_ng_size)
+    # Finally remove scale-in protection added in previous step
     scaling_actions.set_scale_in_protection(select_two_instances, False)
 
 

@@ -140,7 +140,7 @@ class KubeActions:
         timeout = time.time() + 60 * minutes
         return timeout
 
-    def check_no_schedule_tolerations(self):
+    def detect_no_schedule_tolerations(self):
         pods = self.v1_core_api.list_pod_for_all_namespaces().items()
 
         no_schedule_pods = [
