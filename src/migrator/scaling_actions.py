@@ -9,17 +9,36 @@ class ScalingActions:
         self.client = boto3.client("autoscaling")
         self.auto_scaling_group = auto_scaling_group
 
-    def set_scale_in_protection(self, instances: list) -> None:
+    def set_scale_in_protection(self, instances: list, enable_protection: bool) -> None:
         """Set scale-in protection to a a list
         of instances in and Auto Scaling Group"""
         instance_ids = [instance["InstanceId"] for instance in instances]
         response = self.client.set_instance_protection(
             InstanceIds=instance_ids,
             AutoScalingGroupName=self.auto_scaling_group,
-            ProtectedFromScaleIn=True,
+            ProtectedFromScaleIn=enable_protection,
         )
         if response["ResponseMetadata"]["HTTPStatusCode"] == 200:
             logger.info(f"scale-in protection added to: {', '.join(instance_ids)}")
         else:
             logger.error(f"scale-in protection could not be added to: {', '.join(instance_ids)}")
             sys.exit(0)
+
+    def resize_scaling_group(self, size: int) -> None:
+        logger.info(f"Resizing scaling group {self.auto_scaling_group} to {size}")
+        try:
+            _ = self.client.update_auto_scaling_group(
+                AutoScalingGroupName=self.auto_scaling_group,
+                MinSize=size,
+                MaxSize=size,
+                DesiredCapacity=size,
+            )
+        except (
+            self.client.exception.ResourceContentionFault,
+            self.client.exception.ServiceLinkedRoleFailure,
+            self.client.exception.ScalingActivityInProgressFault,
+        ) as e:
+            logger.error(e)
+            sys.exist(1)
+        else:
+            logger.info("Successfully scaled scaling group " f"{self.auto_scaling_group} to {size}")

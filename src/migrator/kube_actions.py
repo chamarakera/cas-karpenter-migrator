@@ -1,4 +1,5 @@
 import time
+import sys
 
 from kubernetes import client
 from kubernetes.client.rest import ApiException
@@ -9,7 +10,7 @@ INTERVAL = 5
 
 class KubeActions:
     def __init__(self, action_timeout=5) -> None:
-        self.v1_api = client.CoreV1Api()
+        self.v1_core_api = client.CoreV1Api()
         self.action_timeout = action_timeout
 
     def corden(self, node_name: str):
@@ -18,7 +19,7 @@ class KubeActions:
                 "unschedulable": True,
             },
         }
-        self.v1_api.patch_node(node_name, body)
+        self.v1_core_api.patch_node(node_name, body)
 
     def pod_is_evicatable(self, pod):
         if pod.metadata.annotations is not None and pod.metadata.annotations.get(
@@ -37,11 +38,15 @@ class KubeActions:
     def get_evictable_pods(self, node_name):
         """Removes all pods from the specified node"""
         field_selector = "spec.nodeName=" + node_name
-        pods = self.v1_api.list_pod_for_all_namespaces(watch=False, field_selector=field_selector)
+        pods = self.v1_core_api.list_pod_for_all_namespaces(
+            watch=False, field_selector=field_selector
+        )
 
         return [pod for pod in pods.items if self.pod_is_evicatable(pod)]
 
     def drain(self, node_name):
+        logger.info(f"Start draining node: {node_name}")
+
         pods = self.get_evictable_pods(node_name)
 
         logger.debug(f"Number of pods to delete: {str(len(pods))}")
@@ -63,7 +68,7 @@ class KubeActions:
                 },
             }
             try:
-                self.v1_api.create_namespaced_pod_eviction(
+                self.v1_core_api.create_namespaced_pod_eviction(
                     pod.metadata.name, pod.metadata.namespace, body
                 )
             except ApiException as e:
@@ -111,7 +116,7 @@ class KubeActions:
             time.sleep(INTERVAL)
 
     def get_pending_pods(self):
-        pods = self.v1_api.list_pod_for_all_namespaces(watch=False)
+        pods = self.v1_core_api.list_pod_for_all_namespaces(watch=False)
         return [pod for pod in pods.items if pod.status.phase == "Pending"]
 
     def wait_until_pods_scheduled(self):
@@ -134,3 +139,23 @@ class KubeActions:
     def timeout(self, minutes):
         timeout = time.time() + 60 * minutes
         return timeout
+
+    def check_no_schedule_tolerations(self):
+        pods = self.v1_core_api.list_pod_for_all_namespaces().items()
+
+        no_schedule_pods = [
+            pod.metadata.name
+            for pod in pods
+            if pod.spec.tolerations is not None
+            for toleration in pod.spec.tolerations
+            if toleration.effect == "NoSchedule" and toleration.operator == "Exists"
+            for ref in pod.metadata.owner_references
+            if ref.controller is not None and ref.controller and ref.kind != "DaemonSet"
+        ]
+
+        if len(no_schedule_pods) > 0:
+            logger.error(
+                "Pods have been found having 'NoSchedule' tolerations. "
+                f"This is preventing node draining: {(', ').join(no_schedule_pods)}"
+            )
+            sys.exit(1)

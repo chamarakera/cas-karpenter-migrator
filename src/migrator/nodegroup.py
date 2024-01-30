@@ -102,7 +102,6 @@ class NodeGroup:
                         {
                             "instance_id": tag["ResourceId"],
                             "node_name": tag["Value"],
-                            "status": "pending",
                         }
                     )
         else:
@@ -115,7 +114,6 @@ class NodeGroup:
                         {
                             "instance_id": instances["InstanceId"],
                             "node_name": instances["PrivateDnsName"],
-                            "status": "pending",
                         }
                     )
 
