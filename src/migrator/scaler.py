@@ -1,10 +1,11 @@
 import sys
+import time
 
 import boto3
 from loguru import logger
 
 
-class ScalingActions:
+class Scaler:
     def __init__(self, auto_scaling_group: str) -> None:
         self.client = boto3.client("autoscaling")
         self.auto_scaling_group = auto_scaling_group
@@ -42,3 +43,19 @@ class ScalingActions:
             sys.exist(1)
         else:
             logger.info("Successfully scaled scaling group " f"{self.auto_scaling_group} to {size}")
+
+    def remove_scale_in_protection(self, instances: list, size: str) -> None:
+        while True:
+            asg = self.client.describe_auto_scaling_groups(
+                AutoScalingGroupNames=[
+                    self.auto_scaling_group,
+                ],
+            )
+            if len(asg["AutoScalingGroups"][0]["Instances"]) == size:
+                self.set_scale_in_protection(instances, False)
+            logger.info(
+                "Waiting for the ASG to scale to size: "
+                f"{size}. Current size: "
+                f"{len(asg['AutoScalingGroups'][0]['Instances'])}"
+            )
+            time.sleep(10)

@@ -8,7 +8,7 @@ from loguru import logger
 INTERVAL = 5
 
 
-class KubeActions:
+class Kuber:
     def __init__(self, action_timeout=5) -> None:
         self.v1_core_api = client.CoreV1Api()
         self.action_timeout = action_timeout

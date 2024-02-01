@@ -2,8 +2,8 @@ from deployment import Deployment
 from kubeconfig import KubeConfig
 from nodegroup import NodeGroup
 from reader import Reader
-from kube_actions import KubeActions
-from scaling_actions import ScalingActions
+from kuber import Kuber
+from scaler import Scaler
 
 
 def main():
@@ -14,7 +14,7 @@ def main():
 
     # Checks if there are Pods with "NoSchedule" tolerations
     # before starting the migration tasks
-    KubeActions().detect_no_schedule_tolerations()
+    Kuber().detect_no_schedule_tolerations()
 
     # Find the deployment object of cluster auto scaler
     # Scale cluster auto scaler deployment down to zero
@@ -32,7 +32,7 @@ def main():
     select_two_instances = node_group.select_instances(instances)
 
     # Add scale-in protection
-    scaling_actions = ScalingActions(auto_scaling_group_name)
+    scaling_actions = Scaler(auto_scaling_group_name)
     scaling_actions.set_scale_in_protection(select_two_instances, True)
 
     # Generate dictionary of instance without protection these
@@ -43,9 +43,9 @@ def main():
 
     # Perform various actions to Corden and evict pods from nodes
     for node in nodes_to_retire:
-        KubeActions().corden(node["node_name"])
-        KubeActions().drain(node["node_name"])
-        KubeActions().wait_until_pods_scheduled()
+        Kuber().corden(node["node_name"])
+        Kuber().drain(node["node_name"])
+        Kuber().wait_until_pods_scheduled()
 
     # Scaling down the ASG/Node Group
     # Since, our scope is a single multi-AZ NG we will
