@@ -7,7 +7,8 @@ $ poetry run python src/migrator
 ```
 
 Assumptions
-- you have single multi-AZ node group
+- You have single multi-AZ node group
+- You are using self-managed nodes
 
 further Support:
-- multiple single-AZ node groups 
+- Multiple single-AZ node groups 
