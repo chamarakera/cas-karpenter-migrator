@@ -1,9 +1,8 @@
 from deployment import Deployment
 from kubeconfig import KubeConfig
+from kuber import Kuber
 from nodegroup import NodeGroup
 from reader import Reader
-from kuber import Kuber
-from scaler import Scaler
 
 
 def main():
@@ -12,49 +11,48 @@ def main():
     # Read config file
     config = Reader("config.yaml")
 
-    # Checks if there are Pods with "NoSchedule" tolerations
-    # before starting the migration tasks
+    # Checks for Pods with "NoSchedule" tolerations
+    # prior to starting any migration asks
     Kuber().detect_no_schedule_tolerations()
 
-    # Find the deployment object of cluster auto scaler
-    # Scale cluster auto scaler deployment down to zero
+    # Find the deployment object of cluster auto scaler and scale it down too 0
     Deployment(config.deployment(), config.namespace()).scale_to_zero()
 
-    # Get EC2 instances in the node group (single multi-AZ ng)
-    node_group = NodeGroup(config.node_group()[0]["name"])
-    instances = node_group.extract_instances(node_group.single_multi_az_node_group())
+    # Loop over node groups
+    for ng in config.node_groups():
+        node_group = NodeGroup(ng["name"])
+        # Extract nodes from the node group
+        nodes = node_group.extract_instances(node_group.single_multi_az_node_group())
 
-    # Extract asg name from the node group
-    auto_scaling_group_name = node_group.extract_asg_name(node_group.single_multi_az_node_group())
+        # Select nodes where Karpenter pods are running
+        # in order to add enable scale-in protection on them
+        karpenter_nodes = Kuber().extract_karpenter_instance_ids(namespace="infra")
 
-    # Select two instances that does not belong to the same AZ
-    # to add scale-in protection from the single multi-AZ node group
-    select_two_instances = node_group.select_instances(instances)
+        # Add scale-in protection
+        node_group.set_scale_in_protection(karpenter_nodes, True)
 
-    # Add scale-in protection
-    scaling_actions = Scaler(auto_scaling_group_name)
-    scaling_actions.set_scale_in_protection(select_two_instances, True)
+        # Create a dict of nodes without scale-in protection. These
+        # nodes would be eventually cordened, drained and terminated
+        nodes_to_retire = node_group.get_node_name(
+            node_group.instances_without_protection(nodes, karpenter_nodes)
+        )
 
-    # Generate dictionary of instance without protection these
-    # instance would eventually cordened, drained and terminated
-    nodes_to_retire = node_group.get_node_name(
-        node_group.instances_without_protection(instances, select_two_instances)
-    )
+        # Perform various actions to corden and evict pods from nodes.
+        # In order to retire them from the node group, Karpenter will
+        # create new nodes to schedule workloads from retired nodes.
+        for node in nodes_to_retire:
+            Kuber().corden(node["node_name"])
+            Kuber().drain(node["node_name"])
+            Kuber().wait_until_pods_scheduled()
 
-    # Perform various actions to Corden and evict pods from nodes
-    for node in nodes_to_retire:
-        Kuber().corden(node["node_name"])
-        Kuber().drain(node["node_name"])
-        Kuber().wait_until_pods_scheduled()
+        # Scaling down the ASG/Node Group
+        # Since, our scope is a single multi-AZ NG we will
+        # keep minimum of 2 instances in the NG as suggested in
+        # https://karpenter.sh/docs/getting-started/migrating-from-cas/#remove-cas
+        node_group.resize_scaling_group()
 
-    # Scaling down the ASG/Node Group
-    # Since, our scope is a single multi-AZ NG we will
-    # keep minimum of 2 instances in the NG as suggested in
-    # https://karpenter.sh/docs/getting-started/migrating-from-cas/#remove-cas
-    single_multi_az_ng_size = 2
-    scaling_actions.resize_scaling_group(single_multi_az_ng_size)
-    # Finally remove scale-in protection added in previous step
-    scaling_actions.set_scale_in_protection(select_two_instances, False)
+        # Finally remove scale-in protection added in previous step
+        node_group.set_scale_in_protection(karpenter_nodes, False)
 
 
 if __name__ == "__main__":

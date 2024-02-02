@@ -1,6 +1,6 @@
 import sys
-
 from typing import Type
+
 from kubernetes import client
 from loguru import logger
 

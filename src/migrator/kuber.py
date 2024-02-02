@@ -1,5 +1,5 @@
-import time
 import sys
+import time
 
 from kubernetes import client
 from kubernetes.client.rest import ApiException
@@ -10,7 +10,7 @@ INTERVAL = 5
 
 class Kuber:
     def __init__(self, action_timeout=5) -> None:
-        self.v1_core_api = client.CoreV1Api()
+        self.core_v1_api = client.CoreV1Api()
         self.action_timeout = action_timeout
 
     def corden(self, node_name: str):
@@ -19,7 +19,7 @@ class Kuber:
                 "unschedulable": True,
             },
         }
-        self.v1_core_api.patch_node(node_name, body)
+        self.core_v1_api.patch_node(node_name, body)
 
     def pod_is_evicatable(self, pod):
         if pod.metadata.annotations is not None and pod.metadata.annotations.get(
@@ -38,7 +38,7 @@ class Kuber:
     def get_evictable_pods(self, node_name):
         """Removes all pods from the specified node"""
         field_selector = "spec.nodeName=" + node_name
-        pods = self.v1_core_api.list_pod_for_all_namespaces(
+        pods = self.core_v1_api.list_pod_for_all_namespaces(
             watch=False, field_selector=field_selector
         )
 
@@ -68,7 +68,7 @@ class Kuber:
                 },
             }
             try:
-                self.v1_core_api.create_namespaced_pod_eviction(
+                self.core_v1_api.create_namespaced_pod_eviction(
                     pod.metadata.name, pod.metadata.namespace, body
                 )
             except ApiException as e:
@@ -76,15 +76,16 @@ class Kuber:
                     remaining.append(pod)
                     logger.waring(
                         f"Pod {pod.metadata.namespace}/{pod.metadata.name} "
-                        "could not be evicted due to distruption budget. Will retry."
+                        "could not be evicted due to disruption budget. Will retry."
                     )
                 else:
                     logger.exception(
-                        f"Unexpected error adding eviction for pod {pod.metadata.namespace}/{pod.metadata.name}"
+                        "Unexpected error when evicting "
+                        f"{pod.metadata.namespace}/{pod.metadata.name}"
                     )
             except:
                 logger.exception(
-                    f"Unexpected error adding evication for pod {pod.metadata.namespace}/{pod.metadata.name}"
+                    "Unexpected error when evicting" f"{pod.metadata.namespace}/{pod.metadata.name}"
                 )
 
         return remaining
@@ -116,7 +117,7 @@ class Kuber:
             time.sleep(INTERVAL)
 
     def get_pending_pods(self):
-        pods = self.v1_core_api.list_pod_for_all_namespaces(watch=False)
+        pods = self.core_v1_api.list_pod_for_all_namespaces(watch=False)
         return [pod for pod in pods.items if pod.status.phase == "Pending"]
 
     def wait_until_pods_scheduled(self):
@@ -141,7 +142,7 @@ class Kuber:
         return timeout
 
     def detect_no_schedule_tolerations(self):
-        pods = self.v1_core_api.list_pod_for_all_namespaces().items()
+        pods = self.core_v1_api.list_pod_for_all_namespaces().items()
 
         no_schedule_pods = [
             pod.metadata.name
@@ -159,3 +160,25 @@ class Kuber:
                 f"This is preventing node draining: {(', ').join(no_schedule_pods)}"
             )
             sys.exit(1)
+
+    def extract_karpenter_instance_ids(self, namespace="karpenter"):
+        try:
+            pods = self.core_v1_api.list_namespaced_pod(
+                namespace=namespace, label_selector="app.kubernetes.io/name=karpenter"
+            ).items
+        except client.exceptions.ApiException as e:
+            logger.error(e)
+            sys.exit(1)
+
+        instance_ids = [self.extract_instance_id_from_node(pod.spec.node_name) for pod in pods]
+        logger.info(f"Instances that have Karpenter running: {(', ').join(instance_ids)}")
+
+        return instance_ids
+
+    def extract_instance_id_from_node(self, node_name: str) -> str:
+        try:
+            instance_id = self.core_v1_api.read_node(node_name).spec.provider_id.split("/")[-1]
+        except client.exceptions.ApiException as e:
+            logger.error(e)
+            sys.exit(1)
+        return instance_id

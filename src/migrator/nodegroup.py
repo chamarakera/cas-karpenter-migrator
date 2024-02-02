@@ -1,6 +1,8 @@
 import sys
+import time
 
 import boto3
+from kubernetes import client
 from loguru import logger
 
 
@@ -9,8 +11,9 @@ class NodeGroup:
         self.node_group_name = node_group_name
         self.asg_client = boto3.client("autoscaling")
         self.ec2_client = boto3.client("ec2")
+        self.core_v1_api = client.CoreV1Api()
 
-    def single_multi_az_node_group(self) -> list:
+    def auto_scaling_group(self) -> list:
         node_group = self.asg_client.describe_auto_scaling_groups(
             Filters=[
                 {
@@ -27,53 +30,22 @@ class NodeGroup:
 
         return node_group["AutoScalingGroups"]
 
-    def extract_instances(self, auto_scaling_group: object) -> list:
-        if not auto_scaling_group["Instances"]:
+    def extract_nodes(self) -> list:
+        if not self.auto_scaling_group()["Instances"]:
             logger.error("No instances identified in the auto scaling group")
             sys.exist(1)
 
-        return auto_scaling_group["Instances"]
+        return self.auto_scaling_group()["Instances"]
 
-    def extract_asg_name(self, auto_scaling_group: object) -> list:
-        logger.info(f"ASG name of the node group: {auto_scaling_group['AutoScalingGroupName']}")
-
-        return auto_scaling_group["AutoScalingGroupName"]
-
-    @staticmethod
-    def select_instances(node_group_instances: list) -> list:
-        selected_instances = []
-
-        if len(node_group_instances) < 2:
-            logger.error("there must be more than 1 instances in the node group")
-            sys.exit(1)
-        else:
-            count = 1
-            for instance in node_group_instances:
-                if count <= 2:
-                    if (
-                        selected_instances
-                        and selected_instances[0]["AvailabilityZone"]
-                        == instance["AvailabilityZone"]
-                    ):
-                        continue
-                    selected_instances.append(instance)
-                    count += 1
-
-        if len(selected_instances) == 1:
-            logger.error("the nodes must belong to at least two different AZs")
-            sys.exit(1)
-
+    def extract_asg_name(self) -> list:
         logger.info(
-            f"Instances selected to add scale-in protection: "
-            f"{', '.join([instance['InstanceId'] for instance in selected_instances])}"
-            f"{', '.join([instance['AvailabilityZone'] for instance in selected_instances])}"
+            f"ASG name of the node group: {self.auto_scaling_group()['AutoScalingGroupName']}"
         )
 
-        return selected_instances
+        return self.auto_scaling_group()["AutoScalingGroupName"]
 
     def instances_without_protection(self, instance_in_asg: list, selected_instances: list) -> list:
         all_instances = [instance["InstanceId"] for instance in instance_in_asg]
-        selected_instances = [instance["InstanceId"] for instance in selected_instances]
         instances_without_protection = [
             instance for instance in all_instances if instance not in selected_instances
         ]
@@ -118,3 +90,50 @@ class NodeGroup:
                     )
 
         return nodes
+
+    def set_scale_in_protection(self, instances: list, enable_protection: bool) -> None:
+        """Set scale-in protection to a a list
+        of instances in and Auto Scaling Group"""
+        instance_ids = [instance["InstanceId"] for instance in instances]
+        response = self.client.set_instance_protection(
+            InstanceIds=instance_ids,
+            AutoScalingGroupName=self.auto_scaling_group,
+            ProtectedFromScaleIn=enable_protection,
+        )
+        if response["ResponseMetadata"]["HTTPStatusCode"] == 200:
+            logger.info(f"scale-in protection added to: {', '.join(instance_ids)}")
+        else:
+            logger.error(f"scale-in protection could not be added to: {', '.join(instance_ids)}")
+            sys.exit(0)
+
+    def resize_scaling_group(self, size=2) -> None:
+        logger.info(f"Resizing scaling group {self.extract_asg_name()} to {size}")
+        try:
+            _ = self.client.update_auto_scaling_group(
+                AutoScalingGroupName=self.extract_asg_name(),
+                MinSize=size,
+                MaxSize=size,
+                DesiredCapacity=size,
+            )
+        except (
+            self.client.exception.ResourceContentionFault,
+            self.client.exception.ServiceLinkedRoleFailure,
+            self.client.exception.ScalingActivityInProgressFault,
+        ) as e:
+            logger.error(e)
+            sys.exist(1)
+        else:
+            logger.info("Successfully scaled scaling group " f"{self.extract_asg_name()} to {size}")
+
+    def remove_scale_in_protection(self, instances: list, size=2) -> None:
+        while True:
+            asg_instance_size = len(self.auto_scaling_group()["Instances"])
+            if asg_instance_size == size:
+                self.set_scale_in_protection(instances, False)
+                return
+            logger.info(
+                "Waiting for the ASG to scale to size: "
+                f"{size}. Current size: "
+                f"{asg_instance_size}"
+            )
+            time.sleep(10)
