@@ -50,7 +50,8 @@ class NodeGroup:
 
     def get_node_name(self, instance_ids: list, use_name_tag=False) -> list:
         """Returns Kubernetes Node name based on lit of EC2 Instance IDs.
-        It will return the 'Name' tag of the instance or the Private DNS name of the instance"""
+        It will return the 'Name' tag of the instance or the Private DNS
+        name of the instance"""
         nodes = []
         if use_name_tag:
             response = self.ec2_client.describe_tags(
@@ -90,7 +91,7 @@ class NodeGroup:
         instance_ids = [instance["InstanceId"] for instance in instances]
         response = self.asg_client.set_instance_protection(
             InstanceIds=instance_ids,
-            AutoScalingGroupName=self.auto_scaling_group,
+            AutoScalingGroupName=self.auto_scaling_group()["AutoScalingGroupName"],
             ProtectedFromScaleIn=enable_protection,
         )
         if response["ResponseMetadata"]["HTTPStatusCode"] == 200:
