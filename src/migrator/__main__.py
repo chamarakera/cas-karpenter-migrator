@@ -34,7 +34,7 @@ def main():
         # Create a dict of nodes without scale-in protection. These
         # nodes would be eventually cordened, drained and terminated
         nodes_to_retire = node_group.get_node_name(
-            node_group.instances_without_protection(nodes, karpenter_nodes)
+            node_group.nodes_without_protection(nodes, karpenter_nodes)
         )
 
         # Perform various actions to corden and evict pods from nodes.

@@ -37,23 +37,16 @@ class NodeGroup:
 
         return self.auto_scaling_group()["Instances"]
 
-    def extract_asg_name(self) -> list:
-        logger.info(
-            f"ASG name of the node group: {self.auto_scaling_group()['AutoScalingGroupName']}"
-        )
-
-        return self.auto_scaling_group()["AutoScalingGroupName"]
-
-    def instances_without_protection(self, instance_in_asg: list, selected_instances: list) -> list:
+    def nodes_without_protection(self, instance_in_asg: list, selected_instances: list) -> list:
         all_instances = [instance["InstanceId"] for instance in instance_in_asg]
-        instances_without_protection = [
+        nodes_without_protection = [
             instance for instance in all_instances if instance not in selected_instances
         ]
         logger.info(
-            "Instances without scale-in protection: " f"{', '.join(instances_without_protection)}"
+            "Instances without scale-in protection: " f"{', '.join(nodes_without_protection)}"
         )
 
-        return instances_without_protection
+        return nodes_without_protection
 
     def get_node_name(self, instance_ids: list, use_name_tag=False) -> list:
         """Returns Kubernetes Node name based on lit of EC2 Instance IDs.
@@ -95,7 +88,7 @@ class NodeGroup:
         """Set scale-in protection to a a list
         of instances in and Auto Scaling Group"""
         instance_ids = [instance["InstanceId"] for instance in instances]
-        response = self.client.set_instance_protection(
+        response = self.asg_client.set_instance_protection(
             InstanceIds=instance_ids,
             AutoScalingGroupName=self.auto_scaling_group,
             ProtectedFromScaleIn=enable_protection,
@@ -107,10 +100,11 @@ class NodeGroup:
             sys.exit(0)
 
     def resize_scaling_group(self, size=2) -> None:
-        logger.info(f"Resizing scaling group {self.extract_asg_name()} to {size}")
+        asg_name = self.auto_scaling_group()["AutoScalingGroupName"]
+        logger.info(f"Resizing scaling group {asg_name} to {size}")
         try:
-            _ = self.client.update_auto_scaling_group(
-                AutoScalingGroupName=self.extract_asg_name(),
+            _ = self.asg_client.update_auto_scaling_group(
+                AutoScalingGroupName=asg_name,
                 MinSize=size,
                 MaxSize=size,
                 DesiredCapacity=size,
@@ -123,7 +117,7 @@ class NodeGroup:
             logger.error(e)
             sys.exist(1)
         else:
-            logger.info("Successfully scaled scaling group " f"{self.extract_asg_name()} to {size}")
+            logger.info("Successfully scaled scaling group " f"{asg_name} to {size}")
 
     def remove_scale_in_protection(self, instances: list, size=2) -> None:
         while True:
