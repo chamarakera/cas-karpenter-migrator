@@ -24,10 +24,8 @@ class NodeGroup:
                 },
             ]
         )
-
         if not node_group["AutoScalingGroups"]:
             logger.error("No node groups were identified. Please check if tags are correct")
-
         return node_group["AutoScalingGroups"]
 
     def extract_nodes(self) -> list:
@@ -45,7 +43,6 @@ class NodeGroup:
         logger.info(
             "Instances without scale-in protection: " f"{', '.join(nodes_without_protection)}"
         )
-
         return nodes_without_protection
 
     def get_node_name(self, instance_ids: list, use_name_tag=False) -> list:
@@ -82,7 +79,6 @@ class NodeGroup:
                             "node_name": instances["PrivateDnsName"],
                         }
                     )
-
         return nodes
 
     def set_scale_in_protection(self, instances: list, enable_protection: bool) -> None:

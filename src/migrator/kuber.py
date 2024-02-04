@@ -41,7 +41,6 @@ class Kuber:
         pods = self.core_v1_api.list_pod_for_all_namespaces(
             watch=False, field_selector=field_selector
         )
-
         return [pod for pod in pods.items if self.pod_is_evicatable(pod)]
 
     def drain(self, node_name):
@@ -87,7 +86,6 @@ class Kuber:
                 logger.exception(
                     "Unexpected error when evicting" f"{pod.metadata.namespace}/{pod.metadata.name}"
                 )
-
         return remaining
 
     def evict_until_completed(self, pods):
@@ -172,7 +170,6 @@ class Kuber:
 
         instance_ids = [self.extract_instance_id_from_node(pod.spec.node_name) for pod in pods]
         logger.info(f"Instances that have Karpenter running: {(', ').join(instance_ids)}")
-
         return instance_ids
 
     def extract_instance_id_from_node(self, node_name: str) -> str:

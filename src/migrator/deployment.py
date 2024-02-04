@@ -25,14 +25,12 @@ class Deployment:
                     " if deployment name or namespace names are correct."
                 )
                 sys.exit(1)
-
         return deployment
 
     def scale_to_zero(self):
         """Scales the deployment replicas to 0"""
         deployment = self.find_deployment()
         deployment.spec.replicas = 0
-
         try:
             patched_deployment = self.apps_v1_api.patch_namespaced_deployment(
                 name=self.deployment_name, namespace=self.namespace, body=deployment
@@ -44,7 +42,6 @@ class Deployment:
                     " if deployment name or namespace names are correct."
                 )
                 sys.exit(1)
-
         logger.info(
             f"Patched number of deployment {patched_deployment.spec.name} "
             f"replicas to: {patched_deployment.spec.replicas}"

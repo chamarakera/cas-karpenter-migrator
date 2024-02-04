@@ -8,7 +8,8 @@ $ poetry run python src/migrator
 
 Assumptions
 - You have single multi-AZ node group
-- You are using self-managed nodes
+- You are using self-managed nodes (not tested in managed NGs)
 
-further Support:
+Further Support:
+- Managed node groups
 - Multiple single-AZ node groups 
