@@ -36,7 +36,6 @@ class Kuber:
         return True
 
     def get_evictable_pods(self, node_name):
-        """Removes all pods from the specified node"""
         field_selector = "spec.nodeName=" + node_name
         pods = self.core_v1_api.list_pod_for_all_namespaces(
             watch=False, field_selector=field_selector
@@ -82,10 +81,6 @@ class Kuber:
                         "Unexpected error when evicting "
                         f"{pod.metadata.namespace}/{pod.metadata.name}"
                     )
-            except:
-                logger.exception(
-                    "Unexpected error when evicting" f"{pod.metadata.namespace}/{pod.metadata.name}"
-                )
         return remaining
 
     def evict_until_completed(self, pods):
@@ -108,9 +103,10 @@ class Kuber:
                 logger.error(
                     "All pods were not be evicted during the specified time. Hence aborting..."
                 )
+                sys.exit(1)
             logger.debug(
                 "Still waiting for deletion of the following pods: "
-                f"{', '.join(map(lambda pod: pod.metadata.namespaace + '/' + pod.metadata.name, pods))}"
+                f"{', '.join([pod.metadata.namespace + '/' +  pod.metadata.name for pod in pods])}"
             )
             time.sleep(INTERVAL)
 
@@ -129,9 +125,10 @@ class Kuber:
                 logger.error(
                     "All pods were not scheduled during the specified time. Hence aborting..."
                 )
+                sys.exit(1)
             logger.debug(
                 f"Still waiting for the pods to be scheduled: "
-                f"{', '.join(map(lambda pod: pod.metadata.namespaace + '/' + pod.metadata.name, pods))}"
+                f"{', '.join([pod.metadata.namespace + '/' +  pod.metadata.name for pod in pods])}"
             )
             time.sleep(INTERVAL)
 

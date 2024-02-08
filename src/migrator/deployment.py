@@ -12,8 +12,6 @@ class Deployment:
         self.apps_v1_api = client.AppsV1Api()
 
     def find_deployment(self) -> Type[client.V1Deployment]:
-        """Finds a deployment object when the name and the namespace
-        of the deployment is given"""
         try:
             deployment = self.apps_v1_api.read_namespaced_deployment(
                 name=self.deployment_name, namespace=self.namespace
@@ -27,10 +25,10 @@ class Deployment:
                 sys.exit(1)
         return deployment
 
-    def scale_to_zero(self):
-        """Scales the deployment replicas to 0"""
+    def scale_to_zero(self) -> None:
         deployment = self.find_deployment()
         deployment.spec.replicas = 0
+
         try:
             patched_deployment = self.apps_v1_api.patch_namespaced_deployment(
                 name=self.deployment_name, namespace=self.namespace, body=deployment

@@ -26,13 +26,13 @@ class NodeGroup:
         )
         if not node_group["AutoScalingGroups"]:
             logger.error("No node groups were identified. Please check if tags are correct")
-        return node_group["AutoScalingGroups"]
+            sys.exit(1)
+        return node_group["AutoScalingGroups"][0]
 
     def extract_nodes(self) -> list:
         if not self.auto_scaling_group()["Instances"]:
             logger.error("No instances identified in the auto scaling group")
             sys.exist(1)
-
         return self.auto_scaling_group()["Instances"]
 
     def nodes_without_protection(self, instance_in_asg: list, selected_instances: list) -> list:
@@ -46,9 +46,6 @@ class NodeGroup:
         return nodes_without_protection
 
     def get_node_name(self, instance_ids: list, use_name_tag=False) -> list:
-        """Returns Kubernetes Node name based on lit of EC2 Instance IDs.
-        It will return the 'Name' tag of the instance or the Private DNS
-        name of the instance"""
         nodes = []
         if use_name_tag:
             response = self.ec2_client.describe_tags(
@@ -81,10 +78,7 @@ class NodeGroup:
                     )
         return nodes
 
-    def set_scale_in_protection(self, instances: list, enable_protection: bool) -> None:
-        """Set scale-in protection to a a list
-        of instances in and Auto Scaling Group"""
-        instance_ids = [instance["InstanceId"] for instance in instances]
+    def set_scale_in_protection(self, instance_ids: list, enable_protection: bool) -> None:
         response = self.asg_client.set_instance_protection(
             InstanceIds=instance_ids,
             AutoScalingGroupName=self.auto_scaling_group()["AutoScalingGroupName"],
@@ -114,7 +108,7 @@ class NodeGroup:
             logger.error(e)
             sys.exist(1)
         else:
-            logger.info("Successfully scaled scaling group " f"{asg_name} to {size}")
+            logger.info("Successfully scaled scaling group {asg_name} to {size}")
 
     def remove_scale_in_protection(self, instances: list, size=2) -> None:
         while True:
